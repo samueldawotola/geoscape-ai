@@ -2,6 +2,7 @@ import { auth0 } from "@/lib/auth0";
 import { redirect } from "next/navigation";
 import { syncUser, getUserTrips } from "@/db/users";
 import { generateTrip } from "@/lib/actions";
+import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -58,27 +59,28 @@ export default async function Dashboard() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {userTrips.map((trip) => (
-              <Card
-                key={trip.id}
-                className="group relative overflow-hidden border-border/50
-                           bg-card/60 backdrop-blur-sm transition-all
-                           hover:border-primary/40 hover:bg-card/80
-                           hover:shadow-lg hover:shadow-primary/5"
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <CardTitle className="text-base group-hover:text-primary transition-colors">
-                      {trip.destination}
-                    </CardTitle>
-                    <Badge variant="secondary" className="shrink-0">Itinerary</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed line-clamp-4">
-                    {trip.content}
-                  </p>
-                </CardContent>
-              </Card>
+              <Link key={trip.id} href={`/dashboard/trips/${trip.id}`}>
+                <Card
+                  className="group relative overflow-hidden border-border/50
+                             bg-card/60 backdrop-blur-sm transition-all
+                             hover:border-primary/40 hover:bg-card/80
+                             hover:shadow-lg hover:shadow-primary/5"
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <CardTitle className="text-base group-hover:text-primary transition-colors">
+                        {trip.destination}
+                      </CardTitle>
+                      <Badge variant="secondary" className="shrink-0">Itinerary</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed line-clamp-4">
+                      {trip.content}
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         )}

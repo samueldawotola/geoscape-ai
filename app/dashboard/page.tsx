@@ -2,10 +2,12 @@ import { auth0 } from "@/lib/auth0";
 import { redirect } from "next/navigation";
 import { syncUser, getUserTrips } from "@/db/users";
 import { generateTrip } from "@/lib/actions";
+import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { GenerateForm } from "@/components/generate-form";
+import { DeleteTripButton } from "@/components/delete-trip-button";
 
 export default async function Dashboard() {
   const session = await auth0.getSession();
@@ -65,12 +67,20 @@ export default async function Dashboard() {
                            hover:border-primary/40 hover:bg-card/80
                            hover:shadow-lg hover:shadow-primary/5"
               >
+                <Link
+                  href={`/dashboard/trips/${trip.id}`}
+                  className="absolute inset-0 z-0"
+                  aria-label={`View itinerary for ${trip.destination}`}
+                />
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between gap-2">
                     <CardTitle className="text-base group-hover:text-primary transition-colors">
                       {trip.destination}
                     </CardTitle>
-                    <Badge variant="secondary" className="shrink-0">Itinerary</Badge>
+                    <div className="relative z-10 flex shrink-0 items-center gap-1">
+                      <Badge variant="secondary">Itinerary</Badge>
+                      <DeleteTripButton tripId={trip.id} destination={trip.destination} />
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>

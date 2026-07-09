@@ -4,7 +4,7 @@ import { auth0 } from "@/lib/auth0";
 import { generateTripContent } from "@/lib/llm";
 import { syncUser } from "@/db/users";
 import { db } from "@/index";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { trips, users } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 
@@ -24,7 +24,7 @@ export async function generateTrip(destination: string) {
 
   try {
     const dbUser = await syncUser(session.user.sub, session.user.email);
-    const content = await generateTripContent(destination, {
+    const { summary, data } = await generateTripContent(destination, {
       displayName: dbUser.displayName,
       dateOfBirth: dbUser.dateOfBirth,
       nationality: dbUser.nationality,
@@ -41,7 +41,8 @@ export async function generateTrip(destination: string) {
       .values({
         userId: dbUser.id,
         destination: destination.trim(),
-        content,
+        content: summary,
+        data,
       })
       .returning();
 
@@ -52,6 +53,24 @@ export async function generateTrip(destination: string) {
     console.error("generateTrip failed:", err);
     return { error: "Couldn't generate your trip right now. Please try again." };
   }
+}
+
+export async function deleteTrip(tripId: string) {
+  const session = await auth0.getSession();
+  if (!session) {
+    throw new Error("Not authenticated");
+  }
+  if (!session.user.email) {
+    throw new Error("No email associated with this account");
+  }
+
+  const dbUser = await syncUser(session.user.sub, session.user.email);
+
+  await db
+    .delete(trips)
+    .where(and(eq(trips.id, tripId), eq(trips.userId, dbUser.id)));
+
+  revalidatePath("/dashboard");
 }
 
 export async function updateProfile(formData: FormData) {

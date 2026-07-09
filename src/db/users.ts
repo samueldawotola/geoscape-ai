@@ -1,6 +1,6 @@
 import { db } from "@/index";
 import { users, trips } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 
 export async function syncUser(auth0Sub: string, email: string) {
   
@@ -30,4 +30,14 @@ export async function getUserTrips(userId: string) {
     .from(trips)
     .where(eq(trips.userId, userId))
     .orderBy(desc(trips.createdAt));
+}
+
+export async function getTripById(tripId: string, userId: string) {
+  const [trip] = await db
+    .select()
+    .from(trips)
+    .where(and(eq(trips.id, tripId), eq(trips.userId, userId)))
+    .limit(1);
+
+  return trip ?? null;
 }

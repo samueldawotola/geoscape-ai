@@ -1,6 +1,9 @@
 import OpenAI from "openai";
+import type { TripPlan } from "@/db/schema";
 
 const openai = new OpenAI();
+
+const MODEL = "gpt-5.4-mini";
 
 type TravelerProfile = {
   displayName?: string | null;
@@ -42,27 +45,137 @@ function buildPreferences(p: TravelerProfile): string {
   return lines.join("\n");
 }
 
-export async function generateTripContent(
-  destination: string,
-  profile: TravelerProfile = {}
-) {
-  const preferences = buildPreferences(profile);
+// ---------- Lane A: schema for the "pure generation" sections ----------
+const itinerarySchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    destinationOverview: { type: "string" },
+    itinerary: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          day: { type: "integer" },
+          title: { type: "string" },
+          morning: { type: "string" },
+          afternoon: { type: "string" },
+          evening: { type: "string" },
+        },
+        required: ["day", "title", "morning", "afternoon", "evening"],
+      },
+    },
+    packingList: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          category: { type: "string" },
+          items: { type: "array", items: { type: "string" } },
+        },
+        required: ["category", "items"],
+      },
+    },
+    budgetBreakdown: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        currency: { type: "string" },
+        lodging: { type: "number" },
+        food: { type: "number" },
+        activities: { type: "number" },
+        transport: { type: "number" },
+        misc: { type: "number" },
+        total: { type: "number" },
+        notes: { type: "string" },
+      },
+      required: ["currency", "lodging", "food", "activities", "transport", "misc", "total", "notes"],
+    },
+    localTips: { type: "array", items: { type: "string" } },
+  },
+  required: ["destinationOverview", "itinerary", "packingList", "budgetBreakdown", "localTips"],
+} as const;
 
-  const userMessage = preferences
-    ? `Tell me about visiting ${destination}. Tailor it to this traveler:\n${preferences}`
-    : `Tell me about visiting ${destination}.`;
+type CoreSections = Omit<TripPlan, "groundedMarkdown">;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-5.4-mini",
-    messages: [
+// ---------- Lane A call: structured, no tools ----------
+async function generateCoreSections(destination: string, preferences: string): Promise<CoreSections> {
+  const ctx = preferences
+    ? `Destination: ${destination}\nTrip length: 5 days\n\nTraveler profile:\n${preferences}`
+    : `Destination: ${destination}\nTrip length: 5 days`;
+
+  const response = await openai.responses.create({
+    model: MODEL,
+    input: [
       {
         role: "system",
         content:
-          "You are a helpful travel assistant. Write a short, vivid description of a destination in 2-3 sentences. If traveler preferences are given, weave them in naturally rather than listing them.",
+          "You are Geospace AI's travel planner. Tailor everything to the traveler's " +
+          "profile. Budget numbers are realistic estimates for the destination in a " +
+          "typical home currency (default USD if unclear). Be specific and practical.",
       },
-      { role: "user", content: userMessage },
+      { role: "user", content: `Plan a trip using this profile:\n\n${ctx}` },
+    ],
+    text: {
+      format: {
+        type: "json_schema",
+        name: "itinerary",
+        schema: itinerarySchema,
+        strict: true,
+      },
+    },
+  });
+
+  return JSON.parse(response.output_text) as CoreSections;
+}
+
+// ---------- Lane B call: web-search grounded, keeps citations ----------
+async function generateGroundedSections(destination: string, preferences: string): Promise<string> {
+  const ctx = preferences
+    ? `Destination: ${destination}\n\nTraveler profile:\n${preferences}`
+    : `Destination: ${destination}`;
+
+  const response = await openai.responses.create({
+    model: MODEL,
+    tools: [{ type: "web_search" }],
+    input: [
+      {
+        role: "system",
+        content:
+          "You research current, factual travel info. NEVER invent safety statistics or " +
+          "advisories — search and cite official sources (e.g. State Dept travel advisories) " +
+          "for anything about crime, disasters, or discrimination. If data is unavailable, " +
+          "say so rather than guessing.",
+      },
+      {
+        role: "user",
+        content:
+          `For this trip, produce three sections with markdown headings:\n` +
+          `## Risk Factors (crime, travel safety, discrimination risk, natural disasters)\n` +
+          `## Online Content (region-specific creators, guides, communities worth checking)\n` +
+          `## Housing Plan (hotel vs Airbnb vs hostel — recommend based on the profile)\n\n${ctx}`,
+      },
     ],
   });
 
-  return response.choices[0].message.content;
+  return response.output_text;
+}
+
+export async function generateTripContent(
+  destination: string,
+  profile: TravelerProfile = {}
+): Promise<{ summary: string; data: TripPlan }> {
+  const preferences = buildPreferences(profile);
+
+  const [core, groundedMarkdown] = await Promise.all([
+    generateCoreSections(destination, preferences),
+    generateGroundedSections(destination, preferences),
+  ]);
+
+  return {
+    summary: core.destinationOverview,
+    data: { ...core, groundedMarkdown },
+  };
 }

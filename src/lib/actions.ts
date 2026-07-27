@@ -2,6 +2,7 @@
 
 import { auth0 } from "@/lib/auth0";
 import { generateTripContent } from "@/lib/llm";
+import { searchHotelsForDestination } from "@/lib/hotel-sources";
 import { syncUser } from "@/db/users";
 import { db } from "@/index";
 import { eq, and } from "drizzle-orm";
@@ -9,7 +10,6 @@ import { trips, users } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 
 export async function generateTrip(destination: string) {
-  
   const session = await auth0.getSession();
   if (!session) {
     throw new Error("Not authenticated");
@@ -24,17 +24,22 @@ export async function generateTrip(destination: string) {
 
   try {
     const dbUser = await syncUser(session.user.sub, session.user.email);
-    const { summary, data } = await generateTripContent(destination, {
-      displayName: dbUser.displayName,
-      dateOfBirth: dbUser.dateOfBirth,
-      nationality: dbUser.nationality,
-      travelStyle: dbUser.travelStyle,
-      fitness: dbUser.fitness,
-      budget: dbUser.budget,
-      accessibility: dbUser.accessibility,
-      familyPets: dbUser.familyPets,
-      hasPassport: dbUser.hasPassport,
-    });
+    const [{ summary, data }] = await Promise.all([
+      generateTripContent(destination, {
+        displayName: dbUser.displayName,
+        dateOfBirth: dbUser.dateOfBirth,
+        nationality: dbUser.nationality,
+        travelStyle: dbUser.travelStyle,
+        fitness: dbUser.fitness,
+        budget: dbUser.budget,
+        accessibility: dbUser.accessibility,
+        familyPets: dbUser.familyPets,
+        hasPassport: dbUser.hasPassport,
+      }),
+      searchHotelsForDestination(destination.trim()).catch((err) => {
+        console.error("Hotel search failed:", err);
+      }),
+    ]);
 
     const [savedTrip] = await db
       .insert(trips)
@@ -49,9 +54,10 @@ export async function generateTrip(destination: string) {
     revalidatePath("/dashboard");
     return { trip: savedTrip };
   } catch (err) {
-    
     console.error("generateTrip failed:", err);
-    return { error: "Couldn't generate your trip right now. Please try again." };
+    return {
+      error: "Couldn't generate your trip right now. Please try again.",
+    };
   }
 }
 

@@ -11,8 +11,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             Geospace<span className="text-teal-400">AI</span>
           </Link>
           <nav className="flex items-center gap-4 text-sm text-muted-foreground">
-            <Link href="/dashboard">Trips</Link>
-            <Link href="/profile">Profile</Link>
+            <Link href="/dashboard" className="transition-colors hover:text-foreground">
+              Trips
+            </Link>
+            <Link href="/globe" className="transition-colors hover:text-foreground">
+              Globe
+            </Link>
+            <Link href="/profile" className="transition-colors hover:text-foreground">
+              Profile
+            </Link>
             <span>{session?.user?.name}</span>
           </nav>
         </div>

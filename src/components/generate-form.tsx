@@ -23,14 +23,17 @@ function SubmitButton() {
 
 export function GenerateForm({
   action,
+  defaultValue,
 }: {
   action: (formData: FormData) => Promise<void>;
+  defaultValue?: string;
 }) {
   return (
     <form action={action} className="flex gap-2 max-w-md mx-auto">
       <Input
         name="destination"
         placeholder="e.g. Kyoto, Japan"
+        defaultValue={defaultValue}
         required
         className="h-11 bg-card/60 backdrop-blur-sm border-border/60
                    focus-visible:ring-primary/40"

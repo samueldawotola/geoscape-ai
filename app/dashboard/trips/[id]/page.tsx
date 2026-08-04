@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DeleteTripButton } from "@/components/delete-trip-button";
 import { HotelList } from "@/components/hotel-list";
-import { parseMarkdownSections } from "@/lib/utils";
 
 export default async function TripDetail({
   params,
@@ -197,24 +196,121 @@ export default async function TripDetail({
               </Card>
             )}
 
-            {trip.data.groundedMarkdown &&
-              parseMarkdownSections(trip.data.groundedMarkdown).map(
-                (section) => (
-                  <Card
-                    key={section.title}
-                    className="border-border/50 bg-card/60 backdrop-blur-sm"
-                  >
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg">{section.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
-                        {section.body}
+            {trip.data.grounded.riskFactors.length > 0 && (
+              <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Risk factors</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {trip.data.grounded.riskFactors.map((risk) => (
+                    <div key={risk.label}>
+                      <p className="text-sm font-medium">{risk.label}</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {risk.body}
                       </p>
-                    </CardContent>
-                  </Card>
-                ),
-              )}
+                      {risk.sourceUrl && (
+                        <a
+                          href={risk.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary underline"
+                        >
+                          {risk.sourceName}
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Online content</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium">Official sources</p>
+                  <ul className="text-sm text-muted-foreground space-y-1 mt-1">
+                    {trip.data.grounded.onlineContent.officialSources.map((s) => (
+                      <li key={s.url}>
+                        <a
+                          href={s.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary underline"
+                        >
+                          {s.name}
+                        </a>{" "}
+                        — {s.note}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium">Community sources</p>
+                  <ul className="text-sm text-muted-foreground space-y-1 mt-1">
+                    {trip.data.grounded.onlineContent.communitySources.map((s) => (
+                      <li key={s.url}>
+                        <a
+                          href={s.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary underline"
+                        >
+                          {s.name}
+                        </a>{" "}
+                        — {s.note}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium">Creators worth following</p>
+                  <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1 mt-1">
+                    {trip.data.grounded.onlineContent.creatorTypes.map((c) => (
+                      <li key={c}>{c}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium">What to search</p>
+                  <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1 mt-1">
+                    {trip.data.grounded.onlineContent.searchTerms.map((t) => (
+                      <li key={t}>{t}</li>
+                    ))}
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Housing plan</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div>
+                  <p className="font-medium">
+                    {trip.data.grounded.housingPlan.recommendation}
+                  </p>
+                  <p className="text-muted-foreground mt-1">
+                    {trip.data.grounded.housingPlan.reasoning}
+                  </p>
+                </div>
+                {trip.data.grounded.housingPlan.alternatives.map((a) => (
+                  <div key={a.option}>
+                    <p className="font-medium">{a.option}</p>
+                    <p className="text-muted-foreground">{a.note}</p>
+                  </div>
+                ))}
+                <p className="text-muted-foreground pt-2 border-t border-border/50">
+                  {trip.data.grounded.housingPlan.budgetPick}
+                </p>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       )}

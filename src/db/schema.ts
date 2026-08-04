@@ -18,14 +18,8 @@ export const users = pgTable("users", {
 
 export type TripPlan = {
   destinationOverview: string;
-  itinerary: Array<{
-    day: number;
-    title: string;
-    morning: string;
-    afternoon: string;
-    evening: string;
-  }>;
-  packingList: Array<{ category: string; items: string[] }>;
+  itinerary: { day: number; title: string; morning: string; afternoon: string; evening: string }[];
+  packingList: { category: string; items: string[] }[];
   budgetBreakdown: {
     currency: string;
     lodging: number;
@@ -34,10 +28,24 @@ export type TripPlan = {
     transport: number;
     misc: number;
     total: number;
-    notes?: string;
+    notes: string;
   };
   localTips: string[];
-  groundedMarkdown: string;
+  grounded: {
+    riskFactors: { label: string; body: string; sourceUrl: string; sourceName: string }[];
+    onlineContent: {
+      officialSources: { name: string; url: string; note: string }[];
+      communitySources: { name: string; url: string; note: string }[];
+      creatorTypes: string[];
+      searchTerms: string[];
+    };
+    housingPlan: {
+      recommendation: string;
+      reasoning: string;
+      alternatives: { option: string; note: string }[];
+      budgetPick: string;
+    };
+  };
 };
 
 export const trips = pgTable("trips", {

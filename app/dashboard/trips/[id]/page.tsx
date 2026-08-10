@@ -2,6 +2,7 @@ import { auth0 } from "@/lib/auth0";
 import { redirect, notFound } from "next/navigation";
 import { syncUser, getTripById } from "@/db/users";
 import { getHotelsForDestination } from "@/lib/hotels";
+import { getDestinationPhotos } from "@/lib/photos";
 import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DeleteTripButton } from "@/components/delete-trip-button";
 import { HotelList } from "@/components/hotel-list";
+import { StickyScrollCards } from "@/components/ui/sticky-scroll-cards";
+import { SkipToInfoLink } from "@/components/skip-to-info-link";
 
 export default async function TripDetail({
   params,
@@ -32,18 +35,39 @@ export default async function TripDetail({
     notFound();
   }
 
-  const hotels = await getHotelsForDestination(trip.destination);
+  const [hotels, photos] = await Promise.all([
+    getHotelsForDestination(trip.destination),
+    getDestinationPhotos(trip.destination),
+  ]);
 
   return (
     <div className="space-y-6">
       <Link
         href="/dashboard"
-        className="text-sm text-muted-foreground hover:text-primary transition-colors"
+        className="fixed left-4 top-1/2 z-40 -translate-y-1/2 text-base font-medium text-muted-foreground hover:text-primary transition-colors md:left-8"
       >
         ← Back to trips
       </Link>
 
-      <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
+      {photos.length > 0 && (
+        <div className="flex justify-end">
+          <SkipToInfoLink
+            targetId="trip-info"
+            className="text-base font-medium text-muted-foreground hover:text-primary transition-colors"
+          >
+            Skip to info ↓
+          </SkipToInfoLink>
+        </div>
+      )}
+
+      {photos.length > 0 && (
+        <StickyScrollCards
+          cards={photos}
+          hint={`scroll to explore ${trip.destination}`}
+        />
+      )}
+
+      <Card id="trip-info" className="border-border/50 bg-card/60 backdrop-blur-sm scroll-mt-20">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-2xl">{trip.destination}</CardTitle>
@@ -196,7 +220,7 @@ export default async function TripDetail({
               </Card>
             )}
 
-            {trip.data.grounded.riskFactors.length > 0 && (
+            {trip.data.grounded && trip.data.grounded.riskFactors.length > 0 && (
               <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg">Risk factors</CardTitle>
@@ -224,7 +248,8 @@ export default async function TripDetail({
               </Card>
             )}
 
-            <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
+            {trip.data.grounded && (
+              <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">Online content</CardTitle>
               </CardHeader>
@@ -285,9 +310,11 @@ export default async function TripDetail({
                   </ul>
                 </div>
               </CardContent>
-            </Card>
+              </Card>
+            )}
 
-            <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
+            {trip.data.grounded && (
+              <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">Housing plan</CardTitle>
               </CardHeader>
@@ -310,7 +337,8 @@ export default async function TripDetail({
                   {trip.data.grounded.housingPlan.budgetPick}
                 </p>
               </CardContent>
-            </Card>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       )}

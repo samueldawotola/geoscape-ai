@@ -2,6 +2,7 @@ import { auth0 } from "@/lib/auth0";
 import { redirect } from "next/navigation";
 import { syncUser, getUserTrips } from "@/db/users";
 import { generateTrip } from "@/lib/actions";
+import { getDestinationPhotos } from "@/lib/photos";
 import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +22,9 @@ export default async function Dashboard() {
 
   const dbUser = await syncUser(session.user.sub, session.user.email);
   const userTrips = await getUserTrips(dbUser.id);
+  const photosByTrip = await Promise.all(
+    userTrips.map((trip) => getDestinationPhotos(trip.destination, 1)),
+  );
 
   async function createTrip(formData: FormData) {
     "use server";
@@ -59,37 +63,46 @@ export default async function Dashboard() {
           </Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {userTrips.map((trip) => (
-              <Card
-                key={trip.id}
-                className="group relative overflow-hidden border-border/50
-                           bg-card/60 backdrop-blur-sm transition-all
-                           hover:border-primary/40 hover:bg-card/80
-                           hover:shadow-lg hover:shadow-primary/5"
-              >
-                <Link
-                  href={`/dashboard/trips/${trip.id}`}
-                  className="absolute inset-0 z-0"
-                  aria-label={`View itinerary for ${trip.destination}`}
-                />
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <CardTitle className="text-base group-hover:text-primary transition-colors">
-                      {trip.destination}
-                    </CardTitle>
-                    <div className="relative z-10 flex shrink-0 items-center gap-1">
-                      <Badge variant="secondary">Itinerary</Badge>
-                      <DeleteTripButton tripId={trip.id} destination={trip.destination} />
+            {userTrips.map((trip, i) => {
+              const photo = photosByTrip[i][0];
+              return (
+                <Card
+                  key={trip.id}
+                  className="group relative overflow-hidden border-border/50
+                             bg-card/60 backdrop-blur-sm transition-all
+                             hover:border-primary/40 hover:bg-card/80
+                             hover:shadow-lg hover:shadow-primary/5"
+                >
+                  <Link
+                    href={`/dashboard/trips/${trip.id}`}
+                    className="absolute inset-0 z-0"
+                    aria-label={`View itinerary for ${trip.destination}`}
+                  />
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <CardTitle className="text-base group-hover:text-primary transition-colors">
+                        {trip.destination}
+                      </CardTitle>
+                      <div className="relative z-10 flex shrink-0 items-center gap-1">
+                        <Badge variant="secondary">Itinerary</Badge>
+                        <DeleteTripButton tripId={trip.id} destination={trip.destination} />
+                      </div>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed line-clamp-4">
-                    {trip.content}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardHeader>
+                  {photo && (
+                    <CardContent>
+                      <div className="aspect-[4/3] overflow-hidden rounded-lg">
+                        <img
+                          src={photo.src}
+                          alt={photo.title}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

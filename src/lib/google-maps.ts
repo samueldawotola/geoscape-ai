@@ -27,7 +27,7 @@ export function loadGoogleMaps(): Promise<GoogleMapsGlobal> {
       return;
     }
 
-    if (window.google?.maps?.importLibrary) {
+    if (window.google?.maps) {
       resolve(window.google);
       return;
     }
@@ -48,7 +48,7 @@ export function loadGoogleMaps(): Promise<GoogleMapsGlobal> {
       window.clearTimeout(timeout);
       delete (window as any)[callbackName];
 
-      if (window.google?.maps?.importLibrary) {
+      if (window.google?.maps) {
         resolve(window.google);
       } else {
         loadPromise = null;

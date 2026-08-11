@@ -3,6 +3,7 @@
 import { auth0 } from "@/lib/auth0";
 import { generateTripContent } from "@/lib/llm";
 import { searchHotelsForDestination } from "@/lib/hotel-sources";
+import { normalizeDestination } from "@/lib/normalize-destination";
 import { syncUser } from "@/db/users";
 import { db } from "@/index";
 import { eq, and } from "drizzle-orm";
@@ -24,8 +25,9 @@ export async function generateTrip(destination: string) {
 
   try {
     const dbUser = await syncUser(session.user.sub, session.user.email);
+    const normalizedDestination = await normalizeDestination(destination);
     const [{ summary, data }] = await Promise.all([
-      generateTripContent(destination, {
+      generateTripContent(normalizedDestination, {
         displayName: dbUser.displayName,
         dateOfBirth: dbUser.dateOfBirth,
         nationality: dbUser.nationality,
@@ -36,7 +38,7 @@ export async function generateTrip(destination: string) {
         familyPets: dbUser.familyPets,
         hasPassport: dbUser.hasPassport,
       }),
-      searchHotelsForDestination(destination.trim()).catch((err) => {
+      searchHotelsForDestination(normalizedDestination).catch((err) => {
         console.error("Hotel search failed:", err);
       }),
     ]);
@@ -45,7 +47,7 @@ export async function generateTrip(destination: string) {
       .insert(trips)
       .values({
         userId: dbUser.id,
-        destination: destination.trim(),
+        destination: normalizedDestination,
         content: summary,
         data,
       })

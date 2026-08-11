@@ -2,6 +2,7 @@ import { auth0 } from "@/lib/auth0";
 import { redirect } from "next/navigation";
 import { syncUser, getUserTrips } from "@/db/users";
 import { generateTrip } from "@/lib/actions";
+import { getDestinationPhotos } from "@/lib/photos";
 import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -71,6 +72,9 @@ export default async function Home({
     session.user.email,
   );
   const recentTrips = trips.slice(0, 6);
+  const photosByTrip = await Promise.all(
+    recentTrips.map((trip) => getDestinationPhotos(trip.destination, 1)),
+  );
 
   return (
     <div className="space-y-8">
@@ -115,30 +119,39 @@ export default async function Home({
           </Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {recentTrips.map((trip) => (
-              <Link key={trip.id} href={`/dashboard/trips/${trip.id}`}>
-                <Card
-                  className="h-full border-border/50 bg-card/60 backdrop-blur-sm transition-all
-                             hover:border-primary/40 hover:bg-card/80"
-                >
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">{trip.destination}</CardTitle>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(trip.createdAt).toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground line-clamp-3">
-                      {trip.content}
-                    </p>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+            {recentTrips.map((trip, i) => {
+              const photo = photosByTrip[i][0];
+              return (
+                <Link key={trip.id} href={`/dashboard/trips/${trip.id}`}>
+                  <Card
+                    className="h-full border-border/50 bg-card/60 backdrop-blur-sm transition-all
+                               hover:border-primary/40 hover:bg-card/80"
+                  >
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">{trip.destination}</CardTitle>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(trip.createdAt).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </CardHeader>
+                    {photo && (
+                      <CardContent>
+                        <div className="aspect-[4/3] overflow-hidden rounded-lg">
+                          <img
+                            src={photo.src}
+                            alt={photo.title}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

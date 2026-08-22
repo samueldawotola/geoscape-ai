@@ -15,7 +15,10 @@ export default function Nav() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-30 border-b border-black/10 bg-[#1C5A7D]">
+    <header
+      className="sticky top-0 z-30 border-b border-black/10 bg-[#1C5A7D] [transform:translateZ(0)] [-webkit-transform:translateZ(0)]"
+      style={{ willChange: "transform" }}
+    >
       <nav className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         <Link href="/" className="font-semibold text-black">
           GeospaceAI
